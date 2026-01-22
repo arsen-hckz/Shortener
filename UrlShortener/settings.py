@@ -11,19 +11,28 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
 from pathlib import Path
+import os 
+from dotenv import load_dotenv
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+env_path = BASE_DIR / ".env"
+print("ENV PATH:", env_path, "exists:", env_path.exists())
+
+load_dotenv(env_path)
+print("MYSQL_HOST from env:", repr(os.getenv("MYSQL_HOST")))
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-2w87mk$abv7bvag-$dm#d6kju2s6kyf$1gxs=j32u(d@nr2xvr'
-
+SECRET_KEY = os.getenv("DJANGO_SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
+BASE_URL = os.getenv("BASE_URL")
 
 ALLOWED_HOSTS = []
 
@@ -37,6 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'Shortener',
+    "rest_framework",
 ]
 
 MIDDLEWARE = [
@@ -74,8 +85,13 @@ WSGI_APPLICATION = 'UrlShortener.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.getenv('MYSQL_DB'),
+        'USER':os.getenv('MYSQL_USER'),
+        'PASSWORD':os.getenv('MYSQL_PASSWORD'),
+        'HOST':os.getenv('MYSQL_HOST'),
+        'PORT':os.getenv('MYSQL_PORT'),
+        "OPTIONS":{"charset":"utf8mb4"},
     }
 }
 
