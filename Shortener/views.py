@@ -54,7 +54,7 @@ class CreateShortLinkView(APIView):
             )
             link.code = base62_encode(link.id)
             link.save(update_fields=["code"])
-        return Response(ShortLinkSerializer(link ,context = {"base_url",settings.BASE_URL}).data,status=status.HTTP_201_CREATED)
+        return Response(ShortLinkSerializer(link ,context = {"base_url":settings.BASE_URL}).data,status=status.HTTP_201_CREATED)
     
 
 
@@ -73,9 +73,9 @@ class RedirectAndTrack(APIView):
 
         ClickEvent.objects.create(
             link = link,
-            ip_hash = ip_hash
-            user_agent = request.META.get("HTTP_USER_AGENT","")
-            referer = request.META.get("HTTP_REFERER","")
+            ip_hash = ip_hash,
+            user_agent = request.META.get("HTTP_USER_AGENT",""),
+            referer = request.META.get("HTTP_REFERER",""),
         )
 
         return redirect(link.long_url)

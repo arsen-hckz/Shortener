@@ -5,7 +5,7 @@ class ShortLink(models.Model):
     long_url = models.URLField(max_length=2000)
     created_at = models.DateField(auto_now_add=True)
     expires_at = models.DateTimeField(null=True,blank=True)
-    is_active = models.BooleanField(blank = True)
+    is_active = models.BooleanField(default= True)
 
 
 class ClickEvent(models.Model):
