@@ -14,6 +14,9 @@ from django.conf import settings
 from django.db import transaction
 from django.db.utils import IntegrityError
 from rest_framework import status
+from .services import create_short_link , Code_Taken
+from .forms import ShortenerForm
+from django.views import View
 
 
 
@@ -27,7 +30,7 @@ class CodeExists(APIView):
         exists = ShortLink.objects.filter(code = code ).exists()
         return Response({"code":code,"Available":not exists})
     
-
+#API shortlink creation using the create logic from create_short_link and Code_taken imported from services.py
 class CreateShortLinkView(APIView):
     def post(self,request):
         serializer = ShortLinkSerializer(data = request.data,context = {"base_url" : settings.BASE_URL})
@@ -35,25 +38,15 @@ class CreateShortLinkView(APIView):
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
 
-        long_url = data["long_url"]
-        custome_code = data.get("custom_code")
-
-        if custome_code:
-            try:
-                with transaction.atomic():
-                    link = ShortLink.objects.create(
-                        code = custome_code,
-                        long_url = long_url
-                    )
-            except IntegrityError:
-                return Response({"message":"Custome code is already in use "},status=status.HTTP_409_CONFLICT)
-        else: 
-            link = ShortLink.objects.create(
-                code = "tmp",
-                long_url = long_url
+        try:
+            link = create_short_link(
+                long_url = data["long_url"],
+                custome_code= data.get("custome_code"),
             )
-            link.code = base62_encode(link.id)
-            link.save(update_fields=["code"])
+        except Code_Taken:
+            return Response({"message":"Code already taken"},status=status.HTTP_409_CONFLICT)
+
+        
         return Response(ShortLinkSerializer(link ,context = {"base_url":settings.BASE_URL}).data,status=status.HTTP_201_CREATED)
     
 
@@ -69,7 +62,7 @@ class RedirectAndTrack(APIView):
          return Response({"message": "Link expired"}, status=410)
         ip = request.META.get("REMOTE_ADDR","")
         salt = timezone.now().strftime("%Y-%m-%d")
-        ip_hash = hashlib.sha256(f"{salt}:{ip}".encode().hexidest() if ip else "")
+        ip_hash = hashlib.sha256(f"{salt}:{ip}".encode()).hexdigest() if ip else ""
 
         ClickEvent.objects.create(
             link = link,
@@ -107,3 +100,26 @@ class LinkStats(APIView):
         )
 
 
+class HomePage(View):
+    def get(self,request):
+        return render(request,"home.html",{"form":ShortenerForm})
+    
+    def post(self,request):
+        form = ShortenerForm(request.POST)
+        if not form.is_valid():
+            return render(request,"home.html",{"form":ShortenerForm})
+        
+        long_url = form.cleaned_data["long_url"]
+        custom_code = form.cleaned_data.get("custom_code") or None
+
+        try:
+            link = create_short_link(
+                long_url=long_url,
+                custome_code=custom_code
+            )
+        except Code_Taken:
+            form.add_error("custome code","that code is taken")
+            return render(request,"home.html",{"form":ShortenerForm})
+        
+        short_link = f"{settings.BASE_URL.rstrip("/")}/{link.code}"
+        return render(request,"home.html",{"form":ShortenerForm,"short_url":short_link})

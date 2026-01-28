@@ -11,7 +11,7 @@ class ShortLink(models.Model):
 class ClickEvent(models.Model):
     link = models.ForeignKey(ShortLink,on_delete=models.CASCADE, related_name = 'clicks')
     ts = models.DateTimeField(auto_now_add=True,db_index=True)
-    ip_hash = models.CharField(max_length=54 ,blank=True)
+    ip_hash = models.CharField(max_length=64 ,blank=True)
     user_agent = models.TextField(blank=True)
     referer = models.TextField(blank=True)
 
